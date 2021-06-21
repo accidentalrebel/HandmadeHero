@@ -1,13 +1,40 @@
 #include <windows.h>
 
-#define internal_function static
+#define internal static
 #define local_persist static
 #define global_variable static
 
 global_variable bool gIsRunning;
 
+internal void
+Win32ResizeDIBSection(int width, int height)
+{
+	HBITMAP CreateDIBSection(
+		HDC              hdc,
+		const BITMAPINFO *pbmi,
+		UINT             usage,
+		VOID             **ppvBits,
+		HANDLE           hSection,
+		DWORD            offset
+		);
+	
+}
+
+internal void
+Win32UpdateWindow(HDC deviceContext, int x, int y, int width, int height)
+{
+	int StretchDIBits(deviceContext,
+										x, y, width, height,
+										x, y, width, height,
+										const VOID       *lpBits,
+										const BITMAPINFO *lpbmi,
+										DIB_RGB_COLORS,
+										DWORD            rop
+		);
+}
+
 LRESULT CALLBACK
-MainWindowProcCallback(HWND window,
+Win32MainWindowProcCallback(HWND window,
 											 UINT message,
 											 WPARAM wParam,
 											 LPARAM lParam)
@@ -29,6 +56,13 @@ MainWindowProcCallback(HWND window,
 	 
 	 case WM_SIZE:
 	 {
+		 RECT clientRect;
+		 GetClientRect(window, &clientRect);
+
+		 int width = clientRect.right - clientRect.left;
+		 int height = clientRect.bottom - clientRect.top;
+		 
+		 Win32ResizeDIBSection(width, height);
 		 OutputDebugStringA("WM_SIZE\n");
 	 } break;
 	 
@@ -42,16 +76,13 @@ MainWindowProcCallback(HWND window,
 	 {
 		 PAINTSTRUCT paint;
 		 HDC deviceContext = BeginPaint(window, &paint);
+
 		 int x = paint.rcPaint.left;
 		 int y = paint.rcPaint.top;
 		 int width = paint.rcPaint.right - paint.rcPaint.left;
 		 int height = paint.rcPaint.bottom - paint.rcPaint.top;
-		 local_persist DWORD operation = WHITENESS;
-		 if ( operation == WHITENESS )
-			 operation = BLACKNESS;
-		 else
-			 operation = WHITENESS;
-		 PatBlt(deviceContext, x, y, width, height, operation);
+
+		 Win32UpdateWindow(deviceContext, x, y, width, height);
 		 EndPaint(window, &paint);
 	 } break;
 	 
@@ -73,7 +104,7 @@ WinMain(HINSTANCE hInstance,
 {
 	WNDCLASSA windowClass = {};
 	windowClass.style = CS_OWNDC|CS_HREDRAW|CS_VREDRAW;
-	windowClass.lpfnWndProc = MainWindowProcCallback;
+	windowClass.lpfnWndProc = Win32MainWindowProcCallback;
   windowClass.hInstance = hInstance;
   windowClass.lpszClassName = "HandmadeHeroWindowClass";
 
