@@ -1,6 +1,10 @@
 #include <windows.h>
 
-static bool gIsRunning;
+#define internal_function static
+#define local_persist static
+#define global_variable static
+
+global_variable bool gIsRunning;
 
 LRESULT CALLBACK
 MainWindowProcCallback(HWND window,
@@ -42,7 +46,7 @@ MainWindowProcCallback(HWND window,
 		 int y = paint.rcPaint.top;
 		 int width = paint.rcPaint.right - paint.rcPaint.left;
 		 int height = paint.rcPaint.bottom - paint.rcPaint.top;
-		 static DWORD operation = WHITENESS;
+		 local_persist DWORD operation = WHITENESS;
 		 if ( operation == WHITENESS )
 			 operation = BLACKNESS;
 		 else
@@ -67,8 +71,6 @@ WinMain(HINSTANCE hInstance,
 				LPSTR lpCmdLine,
 				int nCmdShow)
 {
-	gIsRunning = true;
-	
 	WNDCLASSA windowClass = {};
 	windowClass.style = CS_OWNDC|CS_HREDRAW|CS_VREDRAW;
 	windowClass.lpfnWndProc = MainWindowProcCallback;
@@ -92,6 +94,8 @@ WinMain(HINSTANCE hInstance,
 			0);
 		if ( windowHandle )
 		{
+			gIsRunning = true;
+			
 			while(gIsRunning)
 			{
 				MSG message;
