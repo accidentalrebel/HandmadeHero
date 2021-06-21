@@ -1,11 +1,6 @@
 #include <windows.h>
 
-// LRESULT LRESULT DefWindowProcA(
-//   HWND   hWnd,
-//   UINT   Msg,
-//   WPARAM wParam,
-//   LPARAM lParam
-// );
+static bool gIsRunning;
 
 LRESULT CALLBACK
 MainWindowProcCallback(HWND window,
@@ -24,6 +19,7 @@ MainWindowProcCallback(HWND window,
 	 
 	 case WM_CLOSE:
 	 {
+		 gIsRunning = false;
 		 OutputDebugStringA("WM_CLOSE\n");
 	 } break;
 	 
@@ -34,6 +30,7 @@ MainWindowProcCallback(HWND window,
 	 
 	 case WM_DESTROY:
 	 {
+		 gIsRunning = false;
 		 OutputDebugStringA("WM_DESTROY\n");
 	 } break;
 
@@ -70,6 +67,8 @@ WinMain(HINSTANCE hInstance,
 				LPSTR lpCmdLine,
 				int nCmdShow)
 {
+	gIsRunning = true;
+	
 	WNDCLASSA windowClass = {};
 	windowClass.style = CS_OWNDC|CS_HREDRAW|CS_VREDRAW;
 	windowClass.lpfnWndProc = MainWindowProcCallback;
@@ -93,14 +92,14 @@ WinMain(HINSTANCE hInstance,
 			0);
 		if ( windowHandle )
 		{
-			for(;;)
+			while(gIsRunning)
 			{
 				MSG message;
-				BOOL messageResult = GetMessage(&message, 0, 0, 0);
+				BOOL messageResult = GetMessageA(&message, 0, 0, 0);
 				if ( messageResult > 0 )
 				{
 					TranslateMessage(&message);
-					DispatchMessage(&message);
+					DispatchMessageA(&message);
 				}
 				else
 				{
