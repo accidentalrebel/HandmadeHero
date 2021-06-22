@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <stdint.h>
 
 #define internal static
 #define local_persist static
@@ -35,6 +36,26 @@ Win32ResizeDIBSection(int width, int height)
 															 bitmapMemorySize,
 															 MEM_COMMIT,
 															 PAGE_READWRITE);
+
+	int pitch = width * bytesPerPixel;
+	uint8_t* row = (uint8_t*)gBitmapMemory;
+	for ( int y = 0; y < gBitmapHeight ; ++y )
+	{
+		uint8_t* pixel = (uint8_t*)row;
+		for ( int x = 0; x < gBitmapWidth ; ++x )
+		{
+			*pixel = (uint8_t)x;
+			++pixel;
+			*pixel = (uint8_t)y;
+			++pixel;
+			*pixel = 0;
+			++pixel;
+			*pixel = 0;
+			++pixel;
+		}
+
+		row += pitch;
+	}
 }
 
 internal void
