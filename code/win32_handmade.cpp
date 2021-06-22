@@ -5,21 +5,16 @@
 #define global_variable static
 
 global_variable bool gIsRunning;
+
 global_variable BITMAPINFO gBitmapInfo;
-global_variable void *gBitmapMemory;
-global_variable HBITMAP gBitmapHandle;
-global_variable HDC gBitmapDeviceContext;
+global_variable void* gBitmapMemory;
 
 internal void
 Win32ResizeDIBSection(int width, int height)
 {
-	if ( gBitmapHandle )
+	if ( gBitmapMemory )
 	{
-		DeleteObject(gBitmapHandle);
-	}
-	if ( !gBitmapDeviceContext )
-	{
-		gBitmapDeviceContext = CreateCompatibleDC(0);
+		VirtualFree(gBitmapMemory, 0, MEM_RELEASE);
 	}
 	
 	gBitmapInfo.bmiHeader.biSize = sizeof(gBitmapInfo.bmiHeader);
@@ -28,12 +23,13 @@ Win32ResizeDIBSection(int width, int height)
 	gBitmapInfo.bmiHeader.biPlanes = 1;
 	gBitmapInfo.bmiHeader.biBitCount = 32;
 	gBitmapInfo.bmiHeader.biCompression = BI_RGB;
-	
-  gBitmapHandle = CreateDIBSection(gBitmapDeviceContext,
-																	 &gBitmapInfo,
-																	 DIB_RGB_COLORS,
-																	 &gBitmapMemory,
-																	 0, 0);
+
+	int bytesPerPixel = 4;
+	int bitmapMemorySize = (width*height)*bytesPerPixel;
+	gBitmapMemory = VirtualAlloc(0,
+															 bitmapMemorySize,
+															 MEM_COMMIT,
+															 PAGE_READWRITE);
 }
 
 internal void
