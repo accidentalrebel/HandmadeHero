@@ -8,6 +8,8 @@ global_variable bool gIsRunning;
 
 global_variable BITMAPINFO gBitmapInfo;
 global_variable void* gBitmapMemory;
+global_variable int gBitmapWidth;
+global_variable int gBitmapHeight;
 
 internal void
 Win32ResizeDIBSection(int width, int height)
@@ -16,16 +18,19 @@ Win32ResizeDIBSection(int width, int height)
 	{
 		VirtualFree(gBitmapMemory, 0, MEM_RELEASE);
 	}
+
+	gBitmapWidth = width;
+	gBitmapHeight = height;
 	
 	gBitmapInfo.bmiHeader.biSize = sizeof(gBitmapInfo.bmiHeader);
-	gBitmapInfo.bmiHeader.biWidth = width;
-	gBitmapInfo.bmiHeader.biHeight = height;
+	gBitmapInfo.bmiHeader.biWidth = gBitmapWidth;
+	gBitmapInfo.bmiHeader.biHeight = -gBitmapHeight;
 	gBitmapInfo.bmiHeader.biPlanes = 1;
 	gBitmapInfo.bmiHeader.biBitCount = 32;
 	gBitmapInfo.bmiHeader.biCompression = BI_RGB;
 
 	int bytesPerPixel = 4;
-	int bitmapMemorySize = (width*height)*bytesPerPixel;
+	int bitmapMemorySize = (gBitmapWidth*gBitmapHeight)*bytesPerPixel;
 	gBitmapMemory = VirtualAlloc(0,
 															 bitmapMemorySize,
 															 MEM_COMMIT,
@@ -33,15 +38,17 @@ Win32ResizeDIBSection(int width, int height)
 }
 
 internal void
-Win32UpdateWindow(HDC deviceContext, int x, int y, int width, int height)
+Win32UpdateWindow(HDC deviceContext, RECT* windowRect, int x, int y, int width, int height)
 {
+	int windowWidth = windowRect->right - windowRect->left;
+	int windowHeight = windowRect->bottom - windowRect->top;
 	StretchDIBits(deviceContext,
-										x, y, width, height,
-										x, y, width, height,
-										gBitmapMemory,
-										&gBitmapInfo,
-										DIB_RGB_COLORS,
-										SRCCOPY);
+								0, 0, gBitmapWidth, gBitmapHeight,
+								0, 0, windowWidth, windowHeight,
+								gBitmapMemory,
+								&gBitmapInfo,
+								DIB_RGB_COLORS,
+								SRCCOPY);
 }
 
 LRESULT CALLBACK
@@ -93,7 +100,10 @@ Win32MainWindowProcCallback(HWND window,
 		 int width = paint.rcPaint.right - paint.rcPaint.left;
 		 int height = paint.rcPaint.bottom - paint.rcPaint.top;
 
-		 Win32UpdateWindow(deviceContext, x, y, width, height);
+		 RECT clientRect;
+		 GetClientRect(window, &clientRect);
+		 
+		 Win32UpdateWindow(deviceContext, &clientRect, x, y, width, height);
 		 EndPaint(window, &paint);
 	 } break;
 	 
