@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdint.h>
+#include <xinput.h>
 
 #define internal static
 #define local_persist static
@@ -21,6 +22,38 @@ struct Win32WindowDimension
 	int height;
 };
 
+global_variable bool gIsRunning;
+global_variable Win32OffscreenBuffer gBackBuffer;
+
+#define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE* pState)
+typedef X_INPUT_GET_STATE(x_input_get_state);
+X_INPUT_GET_STATE(XInputGetStateStub)
+{
+	return(0);
+}
+global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
+#define XInputGetState XInputGetState_
+
+#define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION* pVibration)
+typedef X_INPUT_SET_STATE(x_input_set_state);
+X_INPUT_SET_STATE(XInputSetStateStub)
+{
+	return(0);
+}
+global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
+#define XInputSetState XInputSetState_
+
+internal void
+Win32LoadXInput(void)
+{
+	HMODULE xInputLibrary = LoadLibrary("xinput1_3.dll");
+	if ( xInputLibrary )
+	{
+		XInputGetState = (x_input_get_state *)GetProcAddress(xInputLibrary, "XInputGetState");
+		XInputSetState = (x_input_set_state *)GetProcAddress(xInputLibrary, "XInputSetState");
+	}
+}
+
 internal Win32WindowDimension
 GetWindowDimension(HWND window)
 {
@@ -35,9 +68,6 @@ GetWindowDimension(HWND window)
 	return(result);
 }
  
-global_variable bool gIsRunning;
-global_variable Win32OffscreenBuffer gBackBuffer;
-
 internal void
 RenderWeirdGradient(Win32OffscreenBuffer buffer, int xOffset, int yOffset)
 {
@@ -91,8 +121,8 @@ internal void
 Win32DisplayBufferInWindow(HDC deviceContext, int windowWidth, int windowHeight, Win32OffscreenBuffer buffer, int x, int y, int width, int height)
 {
 	StretchDIBits(deviceContext,
-								0, 0, buffer.width, buffer.height,
 								0, 0, windowWidth, windowHeight,
+								0, 0, buffer.width, buffer.height,
 								buffer.memory,
 								&buffer.info,
 								DIB_RGB_COLORS,
@@ -122,9 +152,6 @@ Win32MainWindowProcCallback(HWND window,
 	 
 	 case WM_SIZE:
 	 {
-		 Win32WindowDimension windowDimension = GetWindowDimension(window);
-
-		 Win32ResizeDIBSection(&gBackBuffer, windowDimension.width, windowDimension.height);
 		 OutputDebugStringA("WM_SIZE\n");
 	 } break;
 	 
@@ -165,6 +192,8 @@ WinMain(HINSTANCE hInstance,
 				LPSTR lpCmdLine,
 				int nCmdShow)
 {
+	Win32LoadXInput();
+	
 	WNDCLASSA windowClass = {};
 	windowClass.style = CS_HREDRAW|CS_VREDRAW;
 	windowClass.lpfnWndProc = Win32MainWindowProcCallback;
@@ -188,6 +217,9 @@ WinMain(HINSTANCE hInstance,
 			0);
 		if ( window )
 		{
+			Win32WindowDimension windowDimension = GetWindowDimension(window);
+			Win32ResizeDIBSection(&gBackBuffer, 1280, 720);
+			
 			gIsRunning = true;
 
 			int xOffset = 0;
@@ -206,6 +238,39 @@ WinMain(HINSTANCE hInstance,
 					
 					TranslateMessage(&message);
 					DispatchMessageA(&message);
+				}
+
+				for ( DWORD controllerIndex =0 ; controllerIndex < XUSER_MAX_COUNT ; ++controllerIndex )
+				{
+					XINPUT_STATE controllerState;
+					if ( XInputGetState(controllerIndex, &controllerState ) == ERROR_SUCCESS )
+					{
+						XINPUT_GAMEPAD *pad = &controllerState.Gamepad;
+						bool dpadUp = (pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+						bool dpadRight = (pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
+						bool dpadDown = (pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
+						bool dpadLeft = (pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
+						bool dpadStart = (pad->wButtons & XINPUT_GAMEPAD_START);
+						bool dpadBack = (pad->wButtons & XINPUT_GAMEPAD_BACK);
+						bool dpadLeftShoulder = (pad->wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
+						bool dpadRigthShoulder = (pad->wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
+						bool dpadA = (pad->wButtons & XINPUT_GAMEPAD_A);
+						bool dpadB = (pad->wButtons & XINPUT_GAMEPAD_B);
+						bool dpadX = (pad->wButtons & XINPUT_GAMEPAD_X);
+						bool dpadY = (pad->wButtons & XINPUT_GAMEPAD_Y);
+
+						int16_t stickX = pad->sThumbLX;
+						int16_t stickY = pad->sThumbLY;
+
+						if ( dpadA )
+						{
+							++yOffset;
+						}
+					}
+					else
+					{
+						OutputDebugString("Controller is not available.\n");
+					}
 				}
 
 				RenderWeirdGradient(gBackBuffer, xOffset, yOffset);
