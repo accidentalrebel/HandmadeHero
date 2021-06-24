@@ -6,6 +6,17 @@
 #define local_persist static
 #define global_variable static
 
+typedef int8_t int8;
+typedef int16_t int16;
+typedef int32_t int32;
+typedef int64_t int64;
+typedef int32 bool32;
+
+typedef uint8_t uint8;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef uint64_t uint64;
+
 struct Win32OffscreenBuffer
 {
 	BITMAPINFO info;
@@ -29,7 +40,7 @@ global_variable Win32OffscreenBuffer gBackBuffer;
 typedef X_INPUT_GET_STATE(x_input_get_state);
 X_INPUT_GET_STATE(XInputGetStateStub)
 {
-	return(0);
+	return(ERROR_DEVICE_NOT_CONNECTED);
 }
 global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 #define XInputGetState XInputGetState_
@@ -38,7 +49,7 @@ global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 typedef X_INPUT_SET_STATE(x_input_set_state);
 X_INPUT_SET_STATE(XInputSetStateStub)
 {
-	return(0);
+	return(ERROR_DEVICE_NOT_CONNECTED);
 }
 global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
@@ -46,7 +57,11 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 internal void
 Win32LoadXInput(void)
 {
-	HMODULE xInputLibrary = LoadLibraryA("xinput1_3.dll");
+	HMODULE xInputLibrary = LoadLibraryA("xinput1_4.dll");
+	if ( !xInputLibrary )
+	{
+		xInputLibrary = LoadLibraryA("xinput1_3.dll");
+	}
 	if ( xInputLibrary )
 	{
 		XInputGetState = (x_input_get_state *)GetProcAddress(xInputLibrary, "XInputGetState");
@@ -71,14 +86,14 @@ GetWindowDimension(HWND window)
 internal void
 RenderWeirdGradient(Win32OffscreenBuffer *buffer, int xOffset, int yOffset)
 {
-	uint8_t* row = (uint8_t*)buffer->memory;
+	uint8* row = (uint8*)buffer->memory;
 	for ( int y = 0; y < buffer->height ; ++y )
 	{
 		uint32_t* pixel = (uint32_t*)row;
 		for ( int x = 0; x < buffer->width ; ++x )
 		{
-			uint8_t blue = (x + xOffset);
-			uint8_t green = (y + yOffset);
+			uint8 blue = (x + xOffset);
+			uint8 green = (y + yOffset);
 			
 			*pixel++ = ((green << 8) | blue);
 		}
@@ -160,7 +175,7 @@ Win32MainWindowProcCallback(HWND window,
 	 case WM_KEYDOWN:
 	 case WM_KEYUP:
 	 {
-		 uint32_t vkCode = wParam;
+		 uint32 vkCode = wParam;
 		 bool isDown = ((lParam & (1 << 31 )) == 0);
 		 bool wasDown = ((lParam & ( 1 << 30 )) != 0);
 		 if ( isDown != wasDown )
@@ -199,6 +214,12 @@ Win32MainWindowProcCallback(HWND window,
 			 {
 			 
 			 }
+		 }
+
+		 bool32 altKeyWasDown = (lParam & ( 1 << 29 ));
+		 if ( vkCode == VK_F4 && altKeyWasDown )
+		 {
+			 gIsRunning = false;
 		 }
 
 	 } break;
@@ -307,8 +328,8 @@ WinMain(HINSTANCE hInstance,
 						bool dpadX = (pad->wButtons & XINPUT_GAMEPAD_X);
 						bool dpadY = (pad->wButtons & XINPUT_GAMEPAD_Y);
 
-						int16_t stickX = pad->sThumbLX;
-						int16_t stickY = pad->sThumbLY;
+						int16 stickX = pad->sThumbLX;
+						int16 stickY = pad->sThumbLY;
 
 						if ( dpadA )
 						{
