@@ -15,6 +15,26 @@ struct Win32OffscreenBuffer
 	int bytesPerPixel;
 };
 
+struct Win32WindowDimension
+{
+	int width;
+	int height;
+};
+
+internal Win32WindowDimension
+GetWindowDimension(HWND window)
+{
+	Win32WindowDimension result;
+
+	RECT clientRect;
+	GetClientRect(window, &clientRect);
+				
+	result.width = clientRect.right - clientRect.left;
+	result.height = clientRect.bottom - clientRect.top;
+
+	return(result);
+}
+ 
 global_variable bool gIsRunning;
 global_variable Win32OffscreenBuffer gBackBuffer;
 
@@ -68,10 +88,8 @@ Win32ResizeDIBSection(Win32OffscreenBuffer *buffer, int width, int height)
 }
 
 internal void
-Win32DisplayBufferInWindow(HDC deviceContext, RECT clientRect, Win32OffscreenBuffer buffer, int x, int y, int width, int height)
+Win32DisplayBufferInWindow(HDC deviceContext, int windowWidth, int windowHeight, Win32OffscreenBuffer buffer, int x, int y, int width, int height)
 {
-	int windowWidth = clientRect.right - clientRect.left;
-	int windowHeight = clientRect.bottom - clientRect.top;
 	StretchDIBits(deviceContext,
 								0, 0, buffer.width, buffer.height,
 								0, 0, windowWidth, windowHeight,
@@ -104,13 +122,9 @@ Win32MainWindowProcCallback(HWND window,
 	 
 	 case WM_SIZE:
 	 {
-		 RECT clientRect;
-		 GetClientRect(window, &clientRect);
+		 Win32WindowDimension windowDimension = GetWindowDimension(window);
 
-		 int width = clientRect.right - clientRect.left;
-		 int height = clientRect.bottom - clientRect.top;
-
-		 Win32ResizeDIBSection(&gBackBuffer, width, height);
+		 Win32ResizeDIBSection(&gBackBuffer, windowDimension.width, windowDimension.height);
 		 OutputDebugStringA("WM_SIZE\n");
 	 } break;
 	 
@@ -130,10 +144,8 @@ Win32MainWindowProcCallback(HWND window,
 		 int width = paint.rcPaint.right - paint.rcPaint.left;
 		 int height = paint.rcPaint.bottom - paint.rcPaint.top;
 
-		 RECT clientRect;
-		 GetClientRect(window, &clientRect);
-		 
-		 Win32DisplayBufferInWindow(deviceContext, clientRect, gBackBuffer, x, y, width, height);
+		 Win32WindowDimension windowDimension = GetWindowDimension(window);
+		 Win32DisplayBufferInWindow(deviceContext, windowDimension.width, windowDimension.height, gBackBuffer, x, y, width, height);
 		 EndPaint(window, &paint);
 	 } break;
 	 
@@ -198,13 +210,10 @@ WinMain(HINSTANCE hInstance,
 
 				RenderWeirdGradient(gBackBuffer, xOffset, yOffset);
 				HDC deviceContext = GetDC(window);
-				RECT clientRect;
-				GetClientRect(window, &clientRect);
-				
-				int windowWidth = clientRect.right - clientRect.left;
-				int windowHeight = clientRect.bottom - clientRect.top;
+
+				Win32WindowDimension windowDimension = GetWindowDimension(window);
 					
-				Win32DisplayBufferInWindow(deviceContext, clientRect, gBackBuffer, 0, 0, windowWidth, windowHeight);
+				Win32DisplayBufferInWindow(deviceContext, windowDimension.width, windowDimension.height, gBackBuffer, 0, 0, windowDimension.width, windowDimension.height);
 				ReleaseDC(window, deviceContext);
 
 				++xOffset;
