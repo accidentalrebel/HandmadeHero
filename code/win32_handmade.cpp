@@ -69,13 +69,13 @@ GetWindowDimension(HWND window)
 }
  
 internal void
-RenderWeirdGradient(Win32OffscreenBuffer buffer, int xOffset, int yOffset)
+RenderWeirdGradient(Win32OffscreenBuffer *buffer, int xOffset, int yOffset)
 {
-	uint8_t* row = (uint8_t*)buffer.memory;
-	for ( int y = 0; y < buffer.height ; ++y )
+	uint8_t* row = (uint8_t*)buffer->memory;
+	for ( int y = 0; y < buffer->height ; ++y )
 	{
 		uint32_t* pixel = (uint32_t*)row;
-		for ( int x = 0; x < buffer.width ; ++x )
+		for ( int x = 0; x < buffer->width ; ++x )
 		{
 			uint8_t blue = (x + xOffset);
 			uint8_t green = (y + yOffset);
@@ -83,7 +83,7 @@ RenderWeirdGradient(Win32OffscreenBuffer buffer, int xOffset, int yOffset)
 			*pixel++ = ((green << 8) | blue);
 		}
 
-		row += buffer.pitch;
+		row += buffer->pitch;
 	}
 }
 
@@ -114,17 +114,17 @@ Win32ResizeDIBSection(Win32OffscreenBuffer *buffer, int width, int height)
 
 	buffer->pitch = buffer->width * buffer->bytesPerPixel;
 
-	RenderWeirdGradient(*buffer, 0, 0);
+	RenderWeirdGradient(buffer, 0, 0);
 }
 
 internal void
-Win32DisplayBufferInWindow(HDC deviceContext, int windowWidth, int windowHeight, Win32OffscreenBuffer buffer, int x, int y, int width, int height)
+Win32DisplayBufferInWindow(HDC deviceContext, int windowWidth, int windowHeight, Win32OffscreenBuffer *buffer, int x, int y, int width, int height)
 {
 	StretchDIBits(deviceContext,
 								0, 0, windowWidth, windowHeight,
-								0, 0, buffer.width, buffer.height,
-								buffer.memory,
-								&buffer.info,
+								0, 0, buffer->width, buffer->height,
+								buffer->memory,
+								&buffer->info,
 								DIB_RGB_COLORS,
 								SRCCOPY);
 }
@@ -220,7 +220,7 @@ Win32MainWindowProcCallback(HWND window,
 		 int height = paint.rcPaint.bottom - paint.rcPaint.top;
 
 		 Win32WindowDimension windowDimension = GetWindowDimension(window);
-		 Win32DisplayBufferInWindow(deviceContext, windowDimension.width, windowDimension.height, gBackBuffer, x, y, width, height);
+		 Win32DisplayBufferInWindow(deviceContext, windowDimension.width, windowDimension.height, &gBackBuffer, x, y, width, height);
 		 EndPaint(window, &paint);
 	 } break;
 	 
@@ -321,12 +321,12 @@ WinMain(HINSTANCE hInstance,
 					}
 				}
 
-				RenderWeirdGradient(gBackBuffer, xOffset, yOffset);
+				RenderWeirdGradient(&gBackBuffer, xOffset, yOffset);
 				HDC deviceContext = GetDC(window);
 
 				Win32WindowDimension windowDimension = GetWindowDimension(window);
 					
-				Win32DisplayBufferInWindow(deviceContext, windowDimension.width, windowDimension.height, gBackBuffer, 0, 0, windowDimension.width, windowDimension.height);
+				Win32DisplayBufferInWindow(deviceContext, windowDimension.width, windowDimension.height, &gBackBuffer, 0, 0, windowDimension.width, windowDimension.height);
 				ReleaseDC(window, deviceContext);
 
 				++xOffset;
