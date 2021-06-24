@@ -46,7 +46,7 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 internal void
 Win32LoadXInput(void)
 {
-	HMODULE xInputLibrary = LoadLibrary("xinput1_3.dll");
+	HMODULE xInputLibrary = LoadLibraryA("xinput1_3.dll");
 	if ( xInputLibrary )
 	{
 		XInputGetState = (x_input_get_state *)GetProcAddress(xInputLibrary, "XInputGetState");
@@ -153,6 +153,54 @@ Win32MainWindowProcCallback(HWND window,
 	 case WM_SIZE:
 	 {
 		 OutputDebugStringA("WM_SIZE\n");
+	 } break;
+
+	 case WM_SYSKEYDOWN:
+	 case WM_SYSKEYUP:
+	 case WM_KEYDOWN:
+	 case WM_KEYUP:
+	 {
+		 uint32_t vkCode = wParam;
+		 bool isDown = ((lParam & (1 << 31 )) == 0);
+		 bool wasDown = ((lParam & ( 1 << 30 )) != 0);
+		 if ( isDown != wasDown )
+		 {
+			 if ( vkCode == VK_ESCAPE )
+			 {
+				 OutputDebugStringA("ESCAPE: ");
+				 if( isDown )
+				 {
+					 gIsRunning = false;
+					 OutputDebugStringA("IsDown ");
+				 }
+				 if ( wasDown )
+				 {
+					 OutputDebugStringA("WasDown ");
+				 }
+				 OutputDebugStringA("\n");
+			 }
+			 else if ( vkCode == VK_SPACE )
+			 {
+			 
+			 }
+			 else if ( vkCode == VK_UP )
+			 {
+			 
+			 }
+			 else if ( vkCode == VK_RIGHT )
+			 {
+			 
+			 }
+			 else if ( vkCode == VK_DOWN )
+			 {
+			 
+			 }
+			 else if ( vkCode == VK_LEFT )
+			 {
+			 
+			 }
+		 }
+
 	 } break;
 	 
 	 case WM_DESTROY:
@@ -269,7 +317,7 @@ WinMain(HINSTANCE hInstance,
 					}
 					else
 					{
-						OutputDebugString("Controller is not available.\n");
+						// OutputDebugString("Controller is not available.\n");
 					}
 				}
 
