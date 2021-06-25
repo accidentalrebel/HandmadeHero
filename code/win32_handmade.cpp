@@ -375,15 +375,20 @@ WinMain(HINSTANCE hInstance,
 			
 			gIsRunning = true;
 
+			// NOTE: Graphics test
 			int xOffset = 0;
 			int yOffset = 0;
-			int samplesPerSecond = 48000;
-			int hz = 256;
-			int squareWaveCounter = 0;
-			int squareWavePeriod = samplesPerSecond/hz;
-			int bytesPerSample = sizeof(int16)*2;
 
-			Win32InitDSound(window, samplesPerSecond, samplesPerSecond*bytesPerSample);
+			// NOTE: Sound test
+			int samplesPerSecond = 48000;
+			int toneHz = 256;
+			uint32 runningSampleIndex = 0;
+			int squareWavePeriod = samplesPerSecond / toneHz;
+			int halfSquareWavePeriod = squareWavePeriod / 2;
+			int bytesPerSample = sizeof(int16)*2;
+			int secondaryBufferSize = samplesPerSecond * bytesPerSample;
+
+			Win32InitDSound(window, samplesPerSecond, secondaryBufferSize);
 			
 			while(gIsRunning)
 			{
@@ -440,14 +445,24 @@ WinMain(HINSTANCE hInstance,
 				if ( SUCCEEDED(gSecondaryBuffer->GetCurrentPosition(&playCursor,
 																	&writeCursor)) )
 				{
-					DWORD writePointer = ;
-					DWORD bytesToWrite = ;
-				
+					DWORD bytesToLock = runningSampleIndex * bytesPerSample % secondaryBufferSize;
+					DWORD bytesToWrite;
+					if ( bytesToLock > playCursor )
+					{
+						bytesToWrite = secondaryBufferSize - bytesToLock;
+						bytesToWrite += playCursor;
+					}
+					else
+					{
+						bytesToWrite = playCursor - bytesToLock;
+					}
+
 					VOID *region1;
 					DWORD region1Size;
 					VOID *region2;
 					DWORD region2Size;
-					if ( SUCCEEDED(gSecondaryBuffer->Lock(writePointer,
+
+					if ( SUCCEEDED(gSecondaryBuffer->Lock(bytesToLock,
 														  bytesToWrite,
 														  &region1, &region1Size,
 														  &region2, &region2Size,
@@ -460,29 +475,21 @@ WinMain(HINSTANCE hInstance,
 							sampleIndex < region1SampleCount;
 							++sampleIndex)
 						{
-							if ( squareWaveCounter )
-							{
-								squareWaveCounter = squareWavePeriod;
-							}
-							int16 sampleValue = (squareWaveCounter > (squareWavePeriod / 2)) ? 16000 : -16000;
+							int16 sampleValue = ((runningSampleIndex / halfSquareWavePeriod) % 2) ? 16000 : -16000;
 							*sampleOut++ = sampleValue;
 							*sampleOut++ = sampleValue;
-
-							--squareWaveCounter;
+							++runningSampleIndex;
 						}
+
+						sampleOut = (int16 *)region2;
 						for(DWORD sampleIndex = 0;
 							sampleIndex < region2SampleCount;
 							++sampleIndex)
 						{
-							if ( squareWaveCounter )
-							{
-								squareWaveCounter = squareWavePeriod;
-							}
-							int16 sampleValue = (squareWaveCounter > (squareWavePeriod / 2)) ? 16000 : -16000;
+							int16 sampleValue = ((runningSampleIndex / halfSquareWavePeriod) % 2) ? 16000 : -16000;
 							*sampleOut++ = sampleValue;
 							*sampleOut++ = sampleValue;
-
-							--squareWaveCounter;
+							++runningSampleIndex;
 						}
 					}
 				}
