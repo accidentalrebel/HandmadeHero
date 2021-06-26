@@ -382,6 +382,7 @@ WinMain(HINSTANCE hInstance,
 			// NOTE: Sound test
 			int samplesPerSecond = 48000;
 			int toneHz = 256;
+			int16 toneVolume = 1000;
 			uint32 runningSampleIndex = 0;
 			int squareWavePeriod = samplesPerSecond / toneHz;
 			int halfSquareWavePeriod = squareWavePeriod / 2;
@@ -389,6 +390,7 @@ WinMain(HINSTANCE hInstance,
 			int secondaryBufferSize = samplesPerSecond * bytesPerSample;
 
 			Win32InitDSound(window, samplesPerSecond, secondaryBufferSize);
+			gSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING );
 			
 			while(gIsRunning)
 			{
@@ -475,7 +477,7 @@ WinMain(HINSTANCE hInstance,
 							sampleIndex < region1SampleCount;
 							++sampleIndex)
 						{
-							int16 sampleValue = ((runningSampleIndex / halfSquareWavePeriod) % 2) ? 16000 : -16000;
+							int16 sampleValue = ((runningSampleIndex / halfSquareWavePeriod) % 2) ? toneVolume : -toneVolume;
 							*sampleOut++ = sampleValue;
 							*sampleOut++ = sampleValue;
 							++runningSampleIndex;
@@ -486,12 +488,14 @@ WinMain(HINSTANCE hInstance,
 							sampleIndex < region2SampleCount;
 							++sampleIndex)
 						{
-							int16 sampleValue = ((runningSampleIndex / halfSquareWavePeriod) % 2) ? 16000 : -16000;
+							int16 sampleValue = ((runningSampleIndex / halfSquareWavePeriod) % 2) ? toneVolume : -toneVolume;
 							*sampleOut++ = sampleValue;
 							*sampleOut++ = sampleValue;
 							++runningSampleIndex;
 						}
 					}
+
+					gSecondaryBuffer->Unlock(region1, region1Size, region2, region2Size);
 				}
 				
 				HDC deviceContext = GetDC(window);
