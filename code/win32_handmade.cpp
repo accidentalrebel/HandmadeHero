@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <xinput.h>
 #include <dsound.h>
+#include <math.h>
 
 #define internal static
 #define local_persist static
@@ -17,6 +18,9 @@ typedef uint8_t uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
+
+typedef float real32;
+typedef double real64;
 
 struct Win32OffscreenBuffer
 {
@@ -384,17 +388,16 @@ WinMain(HINSTANCE hInstance,
 			int toneHz = 256;
 			int16 toneVolume = 1000;
 			uint32 runningSampleIndex = 0;
-			int squareWavePeriod = samplesPerSecond / toneHz;
-			int halfSquareWavePeriod = squareWavePeriod / 2;
+			int wavePeriod = samplesPerSecond / toneHz;
+			int halfWavePeriod = wavePeriod / 2;
 			int bytesPerSample = sizeof(int16)*2;
 			int secondaryBufferSize = samplesPerSecond * bytesPerSample;
 
 			Win32InitDSound(window, samplesPerSecond, secondaryBufferSize);
-			gSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING );
+			bool isSoundPlaying = false;
 			
 			while(gIsRunning)
 			{
-				
 				MSG message;
 				if ( PeekMessageA(&message, 0, 0, 0, PM_REMOVE) )
 				{
@@ -477,7 +480,8 @@ WinMain(HINSTANCE hInstance,
 							sampleIndex < region1SampleCount;
 							++sampleIndex)
 						{
-							int16 sampleValue = ((runningSampleIndex / halfSquareWavePeriod) % 2) ? toneVolume : -toneVolume;
+							real32 sineValue = ;
+							int16 sampleValue = ((runningSampleIndex / halfWavePeriod) % 2) ? toneVolume : -toneVolume;
 							*sampleOut++ = sampleValue;
 							*sampleOut++ = sampleValue;
 							++runningSampleIndex;
@@ -488,7 +492,7 @@ WinMain(HINSTANCE hInstance,
 							sampleIndex < region2SampleCount;
 							++sampleIndex)
 						{
-							int16 sampleValue = ((runningSampleIndex / halfSquareWavePeriod) % 2) ? toneVolume : -toneVolume;
+							int16 sampleValue = ((runningSampleIndex / halfWavePeriod) % 2) ? toneVolume : -toneVolume;
 							*sampleOut++ = sampleValue;
 							*sampleOut++ = sampleValue;
 							++runningSampleIndex;
@@ -496,6 +500,12 @@ WinMain(HINSTANCE hInstance,
 					}
 
 					gSecondaryBuffer->Unlock(region1, region1Size, region2, region2Size);
+				}
+
+				if ( !isSoundPlaying )
+				{
+					gSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING );
+					isSoundPlaying = true;
 				}
 				
 				HDC deviceContext = GetDC(window);
