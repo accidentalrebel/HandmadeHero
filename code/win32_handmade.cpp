@@ -8,6 +8,8 @@
 #define local_persist static
 #define global_variable static
 
+#define pi32 3.14159265359f
+
 typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32;
@@ -389,7 +391,6 @@ WinMain(HINSTANCE hInstance,
 			int16 toneVolume = 1000;
 			uint32 runningSampleIndex = 0;
 			int wavePeriod = samplesPerSecond / toneHz;
-			int halfWavePeriod = wavePeriod / 2;
 			int bytesPerSample = sizeof(int16)*2;
 			int secondaryBufferSize = samplesPerSecond * bytesPerSample;
 
@@ -480,8 +481,10 @@ WinMain(HINSTANCE hInstance,
 							sampleIndex < region1SampleCount;
 							++sampleIndex)
 						{
-							real32 sineValue = ;
-							int16 sampleValue = ((runningSampleIndex / halfWavePeriod) % 2) ? toneVolume : -toneVolume;
+							real32 t = 2.0f * pi32 * (real32)runningSampleIndex / (real32)wavePeriod;
+							real32 sineValue = sinf(t);
+							int16 sampleValue = (int16)(sineValue * toneVolume);
+							
 							*sampleOut++ = sampleValue;
 							*sampleOut++ = sampleValue;
 							++runningSampleIndex;
@@ -492,7 +495,10 @@ WinMain(HINSTANCE hInstance,
 							sampleIndex < region2SampleCount;
 							++sampleIndex)
 						{
-							int16 sampleValue = ((runningSampleIndex / halfWavePeriod) % 2) ? toneVolume : -toneVolume;
+							real32 t = 2.0f * pi32 * (real32)runningSampleIndex / (real32)wavePeriod;
+							real32 sineValue = sinf(t);
+							int16 sampleValue = (int16)(sineValue * toneVolume);
+							
 							*sampleOut++ = sampleValue;
 							*sampleOut++ = sampleValue;
 							++runningSampleIndex;
