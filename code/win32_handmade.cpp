@@ -456,9 +456,17 @@ WinMain(HINSTANCE hInstance,
 			Win32InitDSound(window, soundOutput.samplesPerSecond, soundOutput.secondaryBufferSize);
 			Win32FillSoundBuffer(&soundOutput, 0, soundOutput.secondaryBufferSize);
 			gSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING );
+
+			LARGE_INTEGER lastCounter;
+			QueryPerformanceCounter(&lastCounter);
+
+			LARGE_INTEGER perfCounterFrequencyResult;
+			QueryPerformanceFrequency(&perfCounterFrequencyResult);
+			int64 perfCountFrequency = perfCounterFrequencyResult.QuadPart;
 			
 			while(gIsRunning)
 			{
+
 				MSG message;
 				if ( PeekMessageA(&message, 0, 0, 0, PM_REMOVE) )
 				{
@@ -533,8 +541,21 @@ WinMain(HINSTANCE hInstance,
 				ReleaseDC(window, deviceContext);
 
 				++xOffset;
+
+				LARGE_INTEGER endCounter;
+				QueryPerformanceCounter(&endCounter);
+
+				int64 counterElapsed = endCounter.QuadPart - lastCounter.QuadPart;
+				int32 msPerFrame = (int32)(1000 * counterElapsed) / perfCountFrequency;
+				int32 fps =(int32)(perfCountFrequency / counterElapsed);
+
+				char buffer[256];
+				wsprintf(buffer, "Milliseconds/frame: %dms, FPS: %d\n", msPerFrame, fps);
+				OutputDebugStringA(buffer);
+				
+				lastCounter = endCounter;
 			}
-		} 
+		}
 		else
 		{
 			//TODO: Log error
