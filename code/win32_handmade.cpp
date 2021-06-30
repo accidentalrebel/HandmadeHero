@@ -170,6 +170,54 @@ Win32InitDSound(HWND window, int32 samplesPerSecond, int32 bufferSize)
 	}
 }
 
+internal void
+Win32FillSoundBuffer(Win32SoundOutput *soundOutput, DWORD bytesToLock, DWORD bytesToWrite)
+{
+	VOID *region1;
+	DWORD region1Size;
+	VOID *region2;
+	DWORD region2Size;
+
+	if ( SUCCEEDED(gSecondaryBuffer->Lock(bytesToLock,
+										  bytesToWrite,
+										  &region1, &region1Size,
+										  &region2, &region2Size,
+										  0)) )
+	{
+		int16 *sampleOut = (int16 *)region1;
+		DWORD region1SampleCount = region1Size/soundOutput->bytesPerSample;
+		DWORD region2SampleCount = region2Size/soundOutput->bytesPerSample;
+		for(DWORD sampleIndex = 0;
+			sampleIndex < region1SampleCount;
+			++sampleIndex)
+		{
+			real32 t = 2.0f * pi32 * (real32)soundOutput->runningSampleIndex / (real32)soundOutput->wavePeriod;
+			real32 sineValue = sinf(t);
+			int16 sampleValue = (int16)(sineValue * soundOutput->toneVolume);
+							
+			*sampleOut++ = sampleValue;
+			*sampleOut++ = sampleValue;
+			++soundOutput->runningSampleIndex;
+		}
+
+		sampleOut = (int16 *)region2;
+		for(DWORD sampleIndex = 0;
+			sampleIndex < region2SampleCount;
+			++sampleIndex)
+		{
+			real32 t = 2.0f * pi32 * (real32)soundOutput->runningSampleIndex / (real32)soundOutput->wavePeriod;
+			real32 sineValue = sinf(t);
+			int16 sampleValue = (int16)(sineValue * soundOutput->toneVolume);
+							
+			*sampleOut++ = sampleValue;
+			*sampleOut++ = sampleValue;
+			++soundOutput->runningSampleIndex;
+		}
+	}
+
+	gSecondaryBuffer->Unlock(region1, region1Size, region2, region2Size);
+}
+
 internal Win32WindowDimension
 GetWindowDimension(HWND window)
 {
@@ -297,7 +345,7 @@ Win32MainWindowProcCallback(HWND window,
 			  }
 			  else if ( vkCode == VK_SPACE )
 			  {
-			 
+				  
 			  }
 			  else if ( vkCode == VK_UP )
 			  {
@@ -406,7 +454,8 @@ WinMain(HINSTANCE hInstance,
 			soundOutput.secondaryBufferSize = soundOutput.samplesPerSecond * soundOutput.bytesPerSample;
 			
 			Win32InitDSound(window, soundOutput.samplesPerSecond, soundOutput.secondaryBufferSize);
-			bool isSoundPlaying = false;
+			Win32FillSoundBuffer(&soundOutput, 0, soundOutput.secondaryBufferSize);
+			gSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING );
 			
 			while(gIsRunning)
 			{
@@ -464,7 +513,7 @@ WinMain(HINSTANCE hInstance,
 				{
 					DWORD bytesToLock = (soundOutput.runningSampleIndex * soundOutput.bytesPerSample) % soundOutput.secondaryBufferSize;
 					DWORD bytesToWrite;
-					if ( bytesToLock > playCursor )
+				    if ( bytesToLock > playCursor )
 					{
 						bytesToWrite = soundOutput.secondaryBufferSize - bytesToLock;
 						bytesToWrite += playCursor;
@@ -474,55 +523,7 @@ WinMain(HINSTANCE hInstance,
 						bytesToWrite = playCursor - bytesToLock;
 					}
 
-					VOID *region1;
-					DWORD region1Size;
-					VOID *region2;
-					DWORD region2Size;
-
-					if ( SUCCEEDED(gSecondaryBuffer->Lock(bytesToLock,
-														  bytesToWrite,
-														  &region1, &region1Size,
-														  &region2, &region2Size,
-														  0)) )
-					{
-						int16 *sampleOut = (int16 *)region1;
-						DWORD region1SampleCount = region1Size/soundOutput.bytesPerSample;
-						DWORD region2SampleCount = region2Size/soundOutput.bytesPerSample;
-						for(DWORD sampleIndex = 0;
-							sampleIndex < region1SampleCount;
-							++sampleIndex)
-						{
-							real32 t = 2.0f * pi32 * (real32)soundOutput.runningSampleIndex / (real32)soundOutput.wavePeriod;
-							real32 sineValue = sinf(t);
-							int16 sampleValue = (int16)(sineValue * soundOutput.toneVolume);
-							
-							*sampleOut++ = sampleValue;
-							*sampleOut++ = sampleValue;
-							++soundOutput.runningSampleIndex;
-						}
-
-						sampleOut = (int16 *)region2;
-						for(DWORD sampleIndex = 0;
-							sampleIndex < region2SampleCount;
-							++sampleIndex)
-						{
-							real32 t = 2.0f * pi32 * (real32)soundOutput.runningSampleIndex / (real32)soundOutput.wavePeriod;
-							real32 sineValue = sinf(t);
-							int16 sampleValue = (int16)(sineValue * soundOutput.toneVolume);
-							
-							*sampleOut++ = sampleValue;
-							*sampleOut++ = sampleValue;
-							++soundOutput.runningSampleIndex;
-						}
-					}
-
-					gSecondaryBuffer->Unlock(region1, region1Size, region2, region2Size);
-				}
-
-				if ( !isSoundPlaying )
-				{
-					gSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING );
-					isSoundPlaying = true;
+					Win32FillSoundBuffer(&soundOutput, bytesToLock, bytesToWrite);
 				}
 				
 				HDC deviceContext = GetDC(window);
