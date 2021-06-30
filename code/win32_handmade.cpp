@@ -25,6 +25,14 @@ typedef uint64_t uint64;
 typedef float real32;
 typedef double real64;
 
+#include "handmade.cpp"
+
+struct Win32WindowDimension
+{
+	int width;
+	int height;
+};
+
 struct Win32OffscreenBuffer
 {
 	BITMAPINFO info;
@@ -33,12 +41,6 @@ struct Win32OffscreenBuffer
 	int height;
 	int pitch;
 	int bytesPerPixel;
-};
-
-struct Win32WindowDimension
-{
-	int width;
-	int height;
 };
 
 struct Win32SoundOutput
@@ -234,25 +236,6 @@ GetWindowDimension(HWND window)
 }
  
 internal void
-RenderWeirdGradient(Win32OffscreenBuffer *buffer, int xOffset, int yOffset)
-{
-	uint8* row = (uint8*)buffer->memory;
-	for ( int y = 0; y < buffer->height ; ++y )
-	{
-		uint32_t* pixel = (uint32_t*)row;
-		for ( int x = 0; x < buffer->width ; ++x )
-		{
-			uint8 blue = (x + xOffset);
-			uint8 green = (y + yOffset);
-			
-			*pixel++ = ((green << 8) | blue);
-		}
-
-		row += buffer->pitch;
-	}
-}
-
-internal void
 Win32ResizeDIBSection(Win32OffscreenBuffer *buffer, int width, int height)
 {
 	if ( buffer->memory )
@@ -279,7 +262,9 @@ Win32ResizeDIBSection(Win32OffscreenBuffer *buffer, int width, int height)
 
 	buffer->pitch = buffer->width * buffer->bytesPerPixel;
 
-	RenderWeirdGradient(buffer, 0, 0);
+#if 0
+ 	RenderWeirdGradient(buffer, 0, 0);
+#endif
 }
 
 internal void
@@ -515,7 +500,12 @@ WinMain(HINSTANCE hInstance,
 					}
 				}
 
-				RenderWeirdGradient(&gBackBuffer, xOffset, yOffset);
+				GameOffscreenBuffer buffer = {};
+				buffer.memory = gBackBuffer.memory;
+				buffer.width = gBackBuffer.width;
+				buffer.height = gBackBuffer.height;
+				buffer.pitch = gBackBuffer.pitch;
+				GameUpdateAndRender(&buffer, xOffset, yOffset);
 
 				DWORD playCursor;
 				DWORD writeCursor;
@@ -556,9 +546,11 @@ WinMain(HINSTANCE hInstance,
 				real32 fps =(real32)perfCountFrequency / (real32)counterElapsed;
 				real32 mcpf = (real32)cyclesElapsed / (1000.0f * 1000.0f);
 
+#if 0
 				char buffer[256];
 				sprintf(buffer, "%.02fm/fs, %.02ff/s, %.02fMc/s\n", msPerFrame, fps, mcpf);
 				OutputDebugStringA(buffer);
+#endif
 
 				lastCycleCount = endCycleCount;
 				lastCounter = endCounter;
