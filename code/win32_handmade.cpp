@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <xinput.h>
 #include <dsound.h>
 #include <math.h>
@@ -457,7 +458,7 @@ WinMain(HINSTANCE hInstance,
 			Win32FillSoundBuffer(&soundOutput, 0, soundOutput.secondaryBufferSize);
 			gSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING );
 
-			int64 lastCycleCount = __rdtsc();
+			uint64 lastCycleCount = __rdtsc();
 			
 			LARGE_INTEGER lastCounter;
 			QueryPerformanceCounter(&lastCounter);
@@ -544,19 +545,19 @@ WinMain(HINSTANCE hInstance,
 
 				++xOffset;
 
-				int64 endCycleCount = __rdtsc();
+				uint64 endCycleCount = __rdtsc();
 				
 				LARGE_INTEGER endCounter;
 				QueryPerformanceCounter(&endCounter);
 
 				int64 cyclesElapsed = endCycleCount - lastCycleCount;
 				int64 counterElapsed = endCounter.QuadPart - lastCounter.QuadPart;
-				int32 msPerFrame = (int32)(1000 * counterElapsed) / perfCountFrequency;
-				int32 fps =(int32)(perfCountFrequency / counterElapsed);
-				int32 mcpf = (int32)cyclesElapsed / (1000 * 1000);
+				real32 msPerFrame = (real32)(1000.0f * counterElapsed) / (real32)perfCountFrequency;
+				real32 fps =(real32)perfCountFrequency / (real32)counterElapsed;
+				real32 mcpf = (real32)cyclesElapsed / (1000.0f * 1000.0f);
 
 				char buffer[256];
-				wsprintf(buffer, "%dm/fs, %df/s, %dMc/s\n", msPerFrame, fps, mcpf);
+				sprintf(buffer, "%.02fm/fs, %.02ff/s, %.02fMc/s\n", msPerFrame, fps, mcpf);
 				OutputDebugStringA(buffer);
 
 				lastCycleCount = endCycleCount;
